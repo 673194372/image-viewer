@@ -71,7 +71,7 @@ sudo dnf install rust cargo pkg-config gtk4-devel cairo-devel gtk4-layer-shell-d
 ### Building
 
 ```bash
-git clone https://github.com/user/image-viewer.git
+git clone https://github.com/jswysnemc/image-viewer.git
 cd image-viewer
 cargo build --release
 ```

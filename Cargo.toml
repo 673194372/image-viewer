@@ -5,7 +5,7 @@ edition = "2024"
 authors = ["snemc"]
 description = "A lightweight, fast image viewer for Wayland with overlay mode"
 license = "MIT"
-repository = "https://github.com/snemc/image-viewer"
+repository = "https://github.com/jswysnemc/image-viewer"
 keywords = ["image", "viewer", "gtk4", "wayland"]
 categories = ["graphics", "visualization"]
 
