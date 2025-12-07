@@ -1,0 +1,25 @@
+[package]
+name = "image-viewer"
+version = "0.1.0"
+edition = "2024"
+authors = ["snemc"]
+description = "A lightweight, fast image viewer for Wayland with overlay mode"
+license = "MIT"
+repository = "https://github.com/snemc/image-viewer"
+keywords = ["image", "viewer", "gtk4", "wayland"]
+categories = ["graphics", "visualization"]
+
+[dependencies]
+gtk4 = { version = "0.9", features = ["v4_14"] }
+gdk4 = "0.9"
+glib = "0.20"
+gio = "0.20"
+cairo-rs = { version = "0.20", features = ["png"] }
+image = "0.25"
+gtk4-layer-shell = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <!-- 背景圆角矩形 -->
+  <rect x="4" y="4" width="40" height="40" rx="8" fill="#3584e4"/>
+  
+  <!-- 图片框 -->
+  <rect x="8" y="8" width="32" height="32" rx="3" fill="#fff" opacity="0.95"/>
+  
+  <!-- 山景 -->
+  <path d="M8 32 L16 22 L22 28 L32 16 L40 28 L40 37 Q40 40 37 40 L11 40 Q8 40 8 37 Z" fill="#2ec27e"/>
+  
+  <!-- 太阳 -->
+  <circle cx="32" cy="16" r="4" fill="#f6d32d"/>
+  
+  <!-- 放大镜 - 缩小并移到右下角内部 -->
+  <circle cx="30" cy="30" r="6" fill="none" stroke="#1c71d8" stroke-width="2.5"/>
+  <line x1="34.5" y1="34.5" x2="38" y2="38" stroke="#1c71d8" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="30" cy="30" r="4" fill="#fff" opacity="0.3"/>
+</svg>
