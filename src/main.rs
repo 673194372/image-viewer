@@ -5,6 +5,7 @@ use gtk4::{gdk, gio, glib, Application, ApplicationWindow, Box, Button, DrawingA
 use gtk4_layer_shell::{Layer, LayerShell, Edge};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
+use std::env;
 
 const APP_ID: &str = "com.github.image-viewer";
 const TITLEBAR_HEIGHT: i32 = 28;
@@ -40,15 +41,56 @@ fn calc_target_size(img_w: i32, img_h: i32) -> (i32, i32) {
     (w, h)
 }
 
+fn print_help() {
+    eprintln!("Usage: image-viewer [OPTIONS] [FILE]");
+    eprintln!();
+    eprintln!("Options:");
+    eprintln!("  -o, --overlay    Start in overlay (always-on-top) mode");
+    eprintln!("  -h, --help       Show this help message");
+    eprintln!("  -v, --version    Show version");
+}
+
 fn main() -> glib::ExitCode {
+    // 解析命令行参数
+    let args: Vec<String> = env::args().collect();
+    let mut start_overlay = false;
+    let mut file_path: Option<String> = None;
+    
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "-o" | "--overlay" => start_overlay = true,
+            "-h" | "--help" => {
+                print_help();
+                return glib::ExitCode::SUCCESS;
+            }
+            "-v" | "--version" => {
+                eprintln!("image-viewer {}", env!("CARGO_PKG_VERSION"));
+                return glib::ExitCode::SUCCESS;
+            }
+            arg if !arg.starts_with('-') => {
+                file_path = Some(arg.to_string());
+            }
+            _ => {
+                eprintln!("Unknown option: {}", args[i]);
+                print_help();
+                return glib::ExitCode::from(1);
+            }
+        }
+        i += 1;
+    }
+    
     let app = Application::builder()
         .application_id(APP_ID)
         .flags(gio::ApplicationFlags::HANDLES_OPEN)
         .build();
     
-    let initial_file: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
-    let initial_file_open = initial_file.clone();
+    let initial_file: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(file_path));
+    let initial_mode: Rc<Cell<WindowMode>> = Rc::new(Cell::new(
+        if start_overlay { WindowMode::Overlay } else { WindowMode::Normal }
+    ));
     
+    let initial_file_open = initial_file.clone();
     app.connect_open(move |app, files, _| {
         if let Some(file) = files.first() {
             if let Some(path) = file.path() {
@@ -59,11 +101,13 @@ fn main() -> glib::ExitCode {
     });
 
     let initial_file_activate = initial_file.clone();
+    let initial_mode_activate = initial_mode.clone();
     app.connect_activate(move |app| {
-        build_ui(app, initial_file_activate.borrow_mut().take());
+        build_ui(app, initial_file_activate.borrow_mut().take(), initial_mode_activate.get());
     });
     
-    app.run()
+    // 使用空参数运行，避免 GTK 解析我们的自定义参数
+    app.run_with_args::<&str>(&[])
 }
 
 struct ImageState {
@@ -326,10 +370,10 @@ fn create_overlay_window(
     window
 }
 
-fn build_ui(app: &Application, initial_path: Option<String>) {
+fn build_ui(app: &Application, initial_path: Option<String>, initial_mode: WindowMode) {
     let state = Rc::new(RefCell::new(ImageState::default()));
     let mouse_pos = Rc::new(Cell::new((0.0f64, 0.0f64)));
-    let current_mode = Rc::new(Cell::new(WindowMode::Normal));
+    let current_mode = Rc::new(Cell::new(initial_mode));
     let overlay_pos = Rc::new(RefCell::new(OverlayPosition::default()));
     let overlay_window: Rc<RefCell<Option<ApplicationWindow>>> = Rc::new(RefCell::new(None));
     
@@ -823,9 +867,70 @@ fn build_ui(app: &Application, initial_path: Option<String>) {
         })
     };
 
+    // 初始加载图片，如果是 overlay 模式则在加载后启动
     if let Some(path) = initial_path {
         let load = load_image.clone();
-        glib::idle_add_local_once(move || { load(&path); });
+        let start_overlay = initial_mode == WindowMode::Overlay;
+        let app_init = app.clone();
+        let state_init = state.clone();
+        let overlay_pos_init = overlay_pos.clone();
+        let overlay_window_init = overlay_window.clone();
+        let current_mode_init = current_mode.clone();
+        let window_ref_init = window_ref.clone();
+        let da_ref_init = da_ref.clone();
+        let window_init = window.clone();
+        
+        glib::idle_add_local_once(move || {
+            load(&path);
+            
+            // 如果是 overlay 模式启动
+            if start_overlay && state_init.borrow().pixbuf.is_some() {
+                current_mode_init.set(WindowMode::Overlay);
+                window_init.set_visible(false);
+                
+                // 计算居中位置
+                let (scaled_w, scaled_h) = {
+                    let s = state_init.borrow();
+                    get_scaled_size(&s)
+                };
+                let (screen_w, screen_h) = get_screen_size();
+                {
+                    let mut pos = overlay_pos_init.borrow_mut();
+                    pos.margin_left = (screen_w - scaled_w) / 2;
+                    pos.margin_top = (screen_h - scaled_h) / 2;
+                }
+                
+                let mode_exit = current_mode_init.clone();
+                let win_ref_exit = window_ref_init.clone();
+                let overlay_win_exit = overlay_window_init.clone();
+                let state_exit = state_init.clone();
+                let da_ref_exit = da_ref_init.clone();
+                
+                let overlay = create_overlay_window(
+                    &app_init,
+                    state_init.clone(),
+                    overlay_pos_init.clone(),
+                    move || {
+                        mode_exit.set(WindowMode::Normal);
+                        {
+                            let mut s = state_exit.borrow_mut();
+                            s.offset_x = 0.0;
+                            s.offset_y = 0.0;
+                        }
+                        if let Some(ref win) = *win_ref_exit.borrow() {
+                            win.set_visible(true);
+                            win.present();
+                            if let Some(ref da) = *da_ref_exit.borrow() {
+                                da.queue_draw();
+                            }
+                        }
+                        *overlay_win_exit.borrow_mut() = None;
+                    },
+                );
+                overlay.present();
+                *overlay_window_init.borrow_mut() = Some(overlay);
+            }
+        });
     }
 
     let win_open = window.clone();
@@ -899,5 +1004,8 @@ fn build_ui(app: &Application, initial_path: Option<String>) {
         }
     });
 
-    window.present();
+    // overlay 模式时先不显示普通窗口，等图片加载后直接显示 overlay
+    if initial_mode != WindowMode::Overlay {
+        window.present();
+    }
 }

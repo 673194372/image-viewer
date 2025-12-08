@@ -97,8 +97,24 @@ sudo cp assets/image-viewer.svg /usr/share/icons/hicolor/scalable/apps/
 # 打开图片
 image-viewer /path/to/image.png
 
-# 或通过文件管理器打开
+# 以置顶模式启动
+image-viewer -o /path/to/image.png
+image-viewer --overlay /path/to/image.png
+
+# 显示帮助
+image-viewer --help
+
+# 显示版本
+image-viewer --version
 ```
+
+### 命令行参数
+
+| 参数 | 说明 |
+|------|------|
+| `-o`, `--overlay` | 以置顶模式启动 |
+| `-h`, `--help` | 显示帮助信息 |
+| `-v`, `--version` | 显示版本号 |
 
 ### 操作说明
 

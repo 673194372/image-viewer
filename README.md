@@ -97,8 +97,24 @@ sudo cp assets/image-viewer.svg /usr/share/icons/hicolor/scalable/apps/
 # Open an image
 image-viewer /path/to/image.png
 
-# Or use file manager integration
+# Start in overlay (always-on-top) mode
+image-viewer -o /path/to/image.png
+image-viewer --overlay /path/to/image.png
+
+# Show help
+image-viewer --help
+
+# Show version
+image-viewer --version
 ```
+
+### Command Line Options
+
+| Option | Description |
+|--------|-------------|
+| `-o`, `--overlay` | Start in overlay (always-on-top) mode |
+| `-h`, `--help` | Show help message |
+| `-v`, `--version` | Show version |
 
 ### Controls
 
